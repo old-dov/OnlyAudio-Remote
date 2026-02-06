@@ -17,13 +17,12 @@ from kivy.graphics import Color, Rectangle
 DEFAULT_IP = "192.168.1.15"
 PORT = "5000"
 
-# Couleurs
-COL_BG = (0.1, 0.1, 0.1, 1)
-COL_INPUT = (0.2, 0.2, 0.2, 1)
-COL_BTN_PLAY = (0, 0.7, 0, 1)
-COL_BTN_NAV = (0, 0.5, 0.8, 1)
-COL_BTN_OPT = (0.8, 0.4, 0, 1)
-COL_GRAY = (0.3, 0.3, 0.3, 1)
+# Couleurs (Thème Sombre OnlyAudio)
+COL_BG = (0.05, 0.05, 0.05, 1)
+COL_INPUT = (0.15, 0.15, 0.15, 1)
+COL_BTN_PLAY = (0, 0.6, 0, 1)
+COL_BTN_NAV = (0.2, 0.2, 0.2, 1)
+COL_BTN_OPT = (0.3, 0.3, 0.3, 1)
 
 class RemoteApp(App):
     def build(self):
@@ -34,77 +33,64 @@ class RemoteApp(App):
             self.rect = Rectangle(size=(800, 1600), pos=self.root.pos)
         self.root.bind(size=self._update_rect, pos=self._update_rect)
 
-        # 1. ZONE DE CONNEXION (Sécurisée)
+        # 1. CONNEXION (Sécurisée)
         conn_layout = BoxLayout(size_hint_y=0.08, spacing=10)
-        
         self.ip_input = TextInput(
-            text=DEFAULT_IP, multiline=False, password=True, # Masqué
+            text=DEFAULT_IP, multiline=False, password=True, # IP Masquée
             font_size='18sp', halign='center', padding_y=[12,0],
             background_color=COL_INPUT, foreground_color=(1,1,1,1),
-            hint_text="IP (Masquée)", hint_text_color=(0.5,0.5,0.5,1)
+            hint_text="IP", hint_text_color=(0.5,0.5,0.5,1)
         )
-        
-        btn_connect = Button(text="LIER", size_hint_x=0.3, background_color=(0.4, 0.4, 0.4, 1), bold=True)
+        btn_connect = Button(text="LIER", size_hint_x=0.3, background_color=(0.2, 0.4, 0.6, 1), bold=True)
         btn_connect.bind(on_press=self.check_connection)
-        
         conn_layout.add_widget(self.ip_input)
         conn_layout.add_widget(btn_connect)
         self.root.add_widget(conn_layout)
 
-        # 2. POCHETTE (Prend plus de place maintenant)
+        # 2. POCHETTE
         self.cover_image = KivyImage(source="", allow_stretch=True, keep_ratio=True, size_hint_y=0.5)
-        with self.cover_image.canvas.before:
-            Color(0.15, 0.15, 0.15, 1)
-            Rectangle(pos=self.cover_image.pos, size=self.cover_image.size)
         self.root.add_widget(self.cover_image)
 
-        # 3. INFOS TITRE
+        # 3. INFOS
         info_layout = BoxLayout(orientation='vertical', size_hint_y=0.15)
-        self.lbl_title = Label(
-            text="Non connecté", 
-            font_size='26sp', bold=True, color=(1,1,1,1),
-            halign='center', valign='middle'
-        )
+        self.lbl_title = Label(text="OnlyAudio", font_size='24sp', bold=True, color=(1,1,1,1), halign='center', valign='middle')
         self.lbl_title.bind(size=self.lbl_title.setter('text_size'))
-        
-        self.lbl_artist = Label(text="...", font_size='20sp', color=(0, 0.8, 0.8, 1))
-        
+        self.lbl_artist = Label(text="Remote", font_size='18sp', color=(0, 0.8, 1, 1))
         info_layout.add_widget(self.lbl_title)
         info_layout.add_widget(self.lbl_artist)
         self.root.add_widget(info_layout)
 
         # 4. CONTRÔLES
-        ctrl_layout = BoxLayout(size_hint_y=0.15, spacing=8)
+        ctrl_layout = BoxLayout(size_hint_y=0.15, spacing=10)
         
-        btn_shuff = Button(text="ALEA", background_color=COL_BTN_OPT, size_hint_x=0.6, bold=True)
-        btn_shuff.bind(on_press=lambda x: self.send_cmd("shuffle"))
-
-        btn_prev = Button(text="<<", font_size='30sp', background_color=COL_BTN_NAV, bold=True)
+        btn_prev = Button(text="|<", font_size='24sp', background_color=COL_BTN_NAV)
         btn_prev.bind(on_press=lambda x: self.send_cmd("prev"))
 
-        btn_play = Button(text="LECTURE", font_size='22sp', background_color=COL_BTN_PLAY, bold=True, size_hint_x=1.4)
+        btn_play = Button(text="PLAY/PAUSE", font_size='16sp', background_color=COL_BTN_PLAY, bold=True, size_hint_x=1.5)
         btn_play.bind(on_press=lambda x: self.send_cmd("play_pause"))
 
-        btn_next = Button(text=">>", font_size='30sp', background_color=COL_BTN_NAV, bold=True)
+        btn_next = Button(text=">|", font_size='24sp', background_color=COL_BTN_NAV)
         btn_next.bind(on_press=lambda x: self.send_cmd("next"))
 
-        btn_rep = Button(text="REP", background_color=COL_BTN_OPT, size_hint_x=0.6, bold=True)
-        btn_rep.bind(on_press=lambda x: self.send_cmd("repeat"))
-
-        ctrl_layout.add_widget(btn_shuff)
         ctrl_layout.add_widget(btn_prev)
         ctrl_layout.add_widget(btn_play)
         ctrl_layout.add_widget(btn_next)
-        ctrl_layout.add_widget(btn_rep)
         self.root.add_widget(ctrl_layout)
 
-        # 5. VOLUME
-        vol_layout = BoxLayout(size_hint_y=0.12, spacing=15)
-        btn_vm = Button(text="VOL -", font_size='20sp', bold=True, background_color=COL_GRAY)
+        # 5. VOLUME & OPTIONS
+        vol_layout = BoxLayout(size_hint_y=0.12, spacing=10)
+        
+        btn_vm = Button(text="-", font_size='24sp', background_color=COL_BTN_OPT)
         btn_vm.bind(on_press=lambda x: self.send_cmd("vol_down"))
-        btn_vp = Button(text="VOL +", font_size='20sp', bold=True, background_color=COL_GRAY)
+        
+        btn_vp = Button(text="+", font_size='24sp', background_color=COL_BTN_OPT)
         btn_vp.bind(on_press=lambda x: self.send_cmd("vol_up"))
+        
+        btn_shuff = Button(text="ALEA", font_size='12sp', background_color=COL_BTN_OPT)
+        btn_shuff.bind(on_press=lambda x: self.send_cmd("shuffle"))
+
         vol_layout.add_widget(btn_vm)
+        vol_layout.add_widget(btn_shuff)
         vol_layout.add_widget(btn_vp)
         self.root.add_widget(vol_layout)
 
@@ -140,11 +126,8 @@ class RemoteApp(App):
         except: pass
 
     def apply_data(self, data):
-        # Mise à jour simple des textes
         self.lbl_title.text = str(data.get('title', "OnlyAudio"))
         self.lbl_artist.text = str(data.get('artist', "Remote"))
-
-        # Mise à jour Pochette
         b64 = data.get('cover_b64', "")
         if b64:
             try:

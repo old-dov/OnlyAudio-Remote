@@ -10,7 +10,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # 1. Nettoyage disque (Android prend de la place)
+      # 1. Nettoyage disque
       - name: Free Disk Space
         uses: jlumbroso/free-disk-space@main
         with:
@@ -21,45 +21,50 @@ jobs:
           large-packages: true
           swap-storage: true
 
-      # 2. Configuration Java 17 (Obligatoire pour Android 14)
+      # 2. Java 17 (Requis pour Buildozer récent)
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
 
-      # 3. Configuration Python
+      # 3. Python 3.10
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.10'
 
-      # 4. Installation des outils Buildozer
+      # 4. Installation des dépendances
       - name: Install Dependencies
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y build-essential libssl-dev libffi-dev python3-dev \
           autoconf libtool pkg-config zlib1g-dev libncurses5-dev libncursesw5-dev libtinfo5 cmake libltdl-dev
           pip install --upgrade "cython<3.0" virtualenv
-          # On installe la version master de Buildozer
+          # Installation de la version master de Buildozer
           pip install git+https://github.com/kivy/buildozer.git
 
-      # 5. FIX 404 : On télécharge manuellement les fichiers introuvables
+      # 5. FIX 404 : Téléchargement manuel (Bypass)
       - name: Pre-load Cache (Fix 404)
         run: |
           mkdir -p .buildozer/android/cache
           echo "Téléchargement manuel des libs..."
+          # On télécharge les fichiers là où Buildozer les attend
           wget -q -O .buildozer/android/cache/libffi-3.4.4.tar.gz https://github.com/libffi/libffi/releases/download/v3.4.4/libffi-3.4.4.tar.gz
           wget -q -O .buildozer/android/cache/openssl-1.1.1w.tar.gz https://www.openssl.org/source/old/1.1.1/openssl-1.1.1w.tar.gz
+          
+          # On copie aussi dans le dossier root au cas où
+          sudo mkdir -p /root/.buildozer/android/cache
+          sudo cp .buildozer/android/cache/* /root/.buildozer/android/cache/
 
-      # 6. Compilation
+      # 6. Compilation (SANS le 'yes |' qui plante)
       - name: Build with Buildozer
         run: |
-          yes | buildozer android debug
+          buildozer android debug
 
       # 7. Sauvegarde de l'APK
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: remote-app
+          name: OnlyAudio-APK
           path: bin/*.apk

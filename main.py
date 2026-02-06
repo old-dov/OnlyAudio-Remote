@@ -19,7 +19,6 @@ PORT = "5000"
 
 # Couleurs
 COL_BG = (0.1, 0.1, 0.1, 1)
-COL_ZONE_TOP = (0.15, 0.15, 0.15, 1)
 COL_INPUT = (0.2, 0.2, 0.2, 1)
 COL_BTN_PLAY = (0, 0.7, 0, 1)
 COL_BTN_NAV = (0, 0.5, 0.8, 1)
@@ -35,12 +34,12 @@ class RemoteApp(App):
             self.rect = Rectangle(size=(800, 1600), pos=self.root.pos)
         self.root.bind(size=self._update_rect, pos=self._update_rect)
 
-        # 1. ZONE DE CONNEXION (Discrète & Sécurisée)
-        conn_layout = BoxLayout(size_hint_y=0.07, spacing=10)
+        # 1. ZONE DE CONNEXION (Sécurisée)
+        conn_layout = BoxLayout(size_hint_y=0.08, spacing=10)
         
         self.ip_input = TextInput(
             text=DEFAULT_IP, multiline=False, password=True, # Masqué
-            font_size='18sp', halign='center', padding_y=[10,0],
+            font_size='18sp', halign='center', padding_y=[12,0],
             background_color=COL_INPUT, foreground_color=(1,1,1,1),
             hint_text="IP (Masquée)", hint_text_color=(0.5,0.5,0.5,1)
         )
@@ -52,8 +51,8 @@ class RemoteApp(App):
         conn_layout.add_widget(btn_connect)
         self.root.add_widget(conn_layout)
 
-        # 2. POCHETTE
-        self.cover_image = KivyImage(source="", allow_stretch=True, keep_ratio=True, size_hint_y=0.45)
+        # 2. POCHETTE (Prend plus de place maintenant)
+        self.cover_image = KivyImage(source="", allow_stretch=True, keep_ratio=True, size_hint_y=0.5)
         with self.cover_image.canvas.before:
             Color(0.15, 0.15, 0.15, 1)
             Rectangle(pos=self.cover_image.pos, size=self.cover_image.size)
@@ -74,11 +73,7 @@ class RemoteApp(App):
         info_layout.add_widget(self.lbl_artist)
         self.root.add_widget(info_layout)
 
-        # 4. DURÉE TOTALE (Statique & Corrigée)
-        self.lbl_time = Label(text="Durée : --:--", font_size='22sp', bold=True, color=(0.6, 0.6, 0.6, 1), size_hint_y=0.06)
-        self.root.add_widget(self.lbl_time)
-
-        # 5. CONTRÔLES
+        # 4. CONTRÔLES
         ctrl_layout = BoxLayout(size_hint_y=0.15, spacing=8)
         
         btn_shuff = Button(text="ALEA", background_color=COL_BTN_OPT, size_hint_x=0.6, bold=True)
@@ -103,7 +98,7 @@ class RemoteApp(App):
         ctrl_layout.add_widget(btn_rep)
         self.root.add_widget(ctrl_layout)
 
-        # 6. VOLUME
+        # 5. VOLUME
         vol_layout = BoxLayout(size_hint_y=0.12, spacing=15)
         btn_vm = Button(text="VOL -", font_size='20sp', bold=True, background_color=COL_GRAY)
         btn_vm.bind(on_press=lambda x: self.send_cmd("vol_down"))
@@ -145,29 +140,11 @@ class RemoteApp(App):
         except: pass
 
     def apply_data(self, data):
+        # Mise à jour simple des textes
         self.lbl_title.text = str(data.get('title', "OnlyAudio"))
         self.lbl_artist.text = str(data.get('artist', "Remote"))
 
-        # --- CORRECTIF TEMPS INTELLIGENT ---
-        try:
-            raw_dur = float(data.get('dur', 0))
-            
-            # Si le chiffre est petit (< 20 000), c'est des Secondes
-            # Si le chiffre est grand (> 20 000), c'est des Millisecondes
-            if raw_dur < 20000:
-                 total_seconds = int(raw_dur)
-            else:
-                 total_seconds = int(raw_dur / 1000)
-            
-            # Formatage Minute:Seconde
-            mins = total_seconds // 60
-            secs = total_seconds % 60
-            
-            self.lbl_time.text = f"Durée : {mins}:{secs:02d}"
-        except:
-            self.lbl_time.text = "Durée : --:--"
-
-        # Pochette
+        # Mise à jour Pochette
         b64 = data.get('cover_b64', "")
         if b64:
             try:

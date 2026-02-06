@@ -8,7 +8,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      # 1. Nettoyage d'espace disque (les compilations Android sont lourdes)
+      # 1. Nettoyage (Indispensable pour Android)
       - name: Free Disk Space
         uses: jlumbroso/free-disk-space@main
         with:
@@ -19,30 +19,44 @@ jobs:
           large-packages: true
           swap-storage: true
 
-      # 2. Installation des dépendances Linux
+      # 2. CONFIGURATION STRICTE DE L'ENVIRONNEMENT (Le correctif est ici)
+      - name: Setup Java 17
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Python 3.10
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      # 3. Installation des dépendances Linux et Buildozer (Version Master)
       - name: Install Dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential libssl-dev libffi-dev python3-dev openjdk-17-jdk \
+          sudo apt-get install -y build-essential libssl-dev libffi-dev python3-dev \
           autoconf libtool pkg-config zlib1g-dev libncurses5-dev libncursesw5-dev libtinfo5 cmake libltdl-dev
-          pip3 install --upgrade buildozer cython==0.29.33 virtualenv
+          # On installe la version 'Master' de Buildozer qui corrige beaucoup de bugs récents
+          pip3 install --upgrade git+https://github.com/kivy/buildozer.git@master
+          pip3 install cython==0.29.33 virtualenv
 
-      # 3. FIX ANTI-404 : Téléchargement manuel des fichiers dans le cache
+      # 4. FIX ANTI-404 : Téléchargement manuel des fichiers dans le cache
       - name: Pre-download missing libraries (Fix 404)
         run: |
           mkdir -p .buildozer/android/cache
           echo "Téléchargement manuel de libffi et openssl..."
-          wget -q -O .buildozer/android/cache/libffi-3.4.4.tar.gz https://github.com/libffi/libffi/releases/download/v3.4.4/libffi-3.4.4.tar.gz
-          wget -q -O .buildozer/android/cache/openssl-1.1.1w.tar.gz https://www.openssl.org/source/old/1.1.1/openssl-1.1.1w.tar.gz
-          ls -l .buildozer/android/cache/
+          # On force le téléchargement pour éviter que Buildozer ne cherche sur les liens morts
+          wget -O .buildozer/android/cache/libffi-3.4.4.tar.gz https://github.com/libffi/libffi/releases/download/v3.4.4/libffi-3.4.4.tar.gz
+          wget -O .buildozer/android/cache/openssl-1.1.1w.tar.gz https://www.openssl.org/source/old/1.1.1/openssl-1.1.1w.tar.gz
 
-      # 4. Lancement de Buildozer
+      # 5. Lancement de Buildozer
       - name: Build with Buildozer
         run: |
-          # On accepte la licence SDK Android automatiquement
+          # On force l'acceptation des licences SDK
           yes | buildozer android debug
 
-      # 5. Récupération de l'APK fini
+      # 6. Récupération de l'APK fini
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:

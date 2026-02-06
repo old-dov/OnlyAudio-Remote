@@ -6,7 +6,6 @@ import io
 from kivy.app import App
 from kivy.clock import Clock
 from kivy.uix.boxlayout import BoxLayout
-from kivy.uix.stencilview import StencilView # Pour le défilement
 from kivy.uix.label import Label
 from kivy.uix.button import Button
 from kivy.uix.textinput import TextInput
@@ -14,54 +13,19 @@ from kivy.uix.progressbar import ProgressBar
 from kivy.uix.image import Image as KivyImage
 from kivy.core.image import Image as CoreImage
 from kivy.graphics import Color, Rectangle
-from kivy.animation import Animation
-from kivy.properties import StringProperty
 
 # --- CONFIGURATION ---
 DEFAULT_IP = "192.168.1.15"
 PORT = "5000"
 
-# Couleurs
+# Couleurs (Haute Visibilité)
 COL_BG = (0.1, 0.1, 0.1, 1)
 COL_INPUT = (0.9, 0.9, 0.9, 1)
-COL_BTN_MAIN = (0, 0.7, 0, 1)
-COL_BTN_NAV = (0, 0.5, 0.8, 1)
-COL_BTN_OPT = (0.8, 0.4, 0, 1)
+COL_BTN_PLAY = (0, 0.7, 0, 1)    # Vert
+COL_BTN_NAV = (0, 0.5, 0.8, 1)   # Bleu
+COL_BTN_OPT = (0.8, 0.4, 0, 1)   # Orange
+COL_GRAY = (0.3, 0.3, 0.3, 1)
 
-# --- WIDGET TITRE DÉFILANT (Fait main pour Kivy Standard) ---
-class ScrollLabel(StencilView):
-    text = StringProperty("")
-    
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.label = Label(text=self.text, font_size='28sp', bold=True, color=(1,1,1,1), size_hint=(None, 1))
-        self.add_widget(self.label)
-        self.bind(text=self.update_text, size=self.trigger_anim)
-        self.anim = None
-
-    def update_text(self, instance, value):
-        self.label.text = value
-        self.label.texture_update()
-        self.label.width = self.label.texture_size[0] + 50 # Marge
-        self.trigger_anim()
-
-    def trigger_anim(self, *args):
-        if self.anim: self.anim.cancel()
-        self.label.pos = (0, 0) # Reset
-        
-        # Si le texte est plus large que l'écran -> On anime
-        if self.label.width > self.width:
-            # Animation : Va à gauche, attend, revient instantanément, répète
-            duration = self.label.width / 60.0 # Vitesse
-            self.anim = Animation(x=-(self.label.width - self.width + 20), duration=duration, t='linear') + \
-                        Animation(x=10, duration=0)
-            self.anim.repeat = True
-            self.anim.start(self.label)
-        else:
-            # Sinon on centre
-            self.label.center_x = self.center_x
-
-# --- APPLICATION PRINCIPALE ---
 class RemoteApp(App):
     def build(self):
         self.root = BoxLayout(orientation='vertical', padding=15, spacing=10)
@@ -72,9 +36,13 @@ class RemoteApp(App):
             self.rect = Rectangle(size=(800, 1600), pos=self.root.pos)
         self.root.bind(size=self._update_rect, pos=self._update_rect)
 
-        # 1. Connexion
+        # 1. Connexion (IP)
         ip_layout = BoxLayout(size_hint_y=0.08, spacing=10)
-        self.ip_input = TextInput(text=DEFAULT_IP, multiline=False, font_size='20sp', halign='center', background_color=COL_INPUT)
+        self.ip_input = TextInput(
+            text=DEFAULT_IP, multiline=False, 
+            font_size='22sp', halign='center', padding_y=[10,0],
+            background_color=COL_INPUT
+        )
         btn_connect = Button(text="RELIER", size_hint_x=0.4, background_color=COL_BTN_NAV, bold=True)
         btn_connect.bind(on_press=self.check_connection)
         ip_layout.add_widget(self.ip_input)
@@ -83,45 +51,55 @@ class RemoteApp(App):
 
         # 2. Pochette
         self.cover_image = KivyImage(source="", allow_stretch=True, keep_ratio=True, size_hint_y=0.35)
+        # Un fond gris derrière l'image pour faire propre si vide
+        with self.cover_image.canvas.before:
+            Color(0.2, 0.2, 0.2, 1)
+            Rectangle(pos=self.cover_image.pos, size=self.cover_image.size)
         self.root.add_widget(self.cover_image)
 
-        # 3. Titre Défilant + Artiste
+        # 3. Infos Titre (Statique mais sur 2 lignes max)
         info_layout = BoxLayout(orientation='vertical', size_hint_y=0.15)
         
-        # Notre nouveau widget défilant
-        self.scrolling_title = ScrollLabel(size_hint_y=0.6)
-        self.scrolling_title.text = "En attente de connexion..."
+        self.lbl_title = Label(
+            text="En attente...", 
+            font_size='26sp', 
+            bold=True, 
+            color=(1,1,1,1),
+            halign='center', valign='middle'
+        )
+        # Astuce pour centrer le texte et permettre le retour à la ligne
+        self.lbl_title.bind(size=self.lbl_title.setter('text_size')) 
         
-        self.lbl_artist = Label(text="OnlyAudio", font_size='22sp', color=(0, 0.8, 0.8, 1), size_hint_y=0.4)
+        self.lbl_artist = Label(text="OnlyAudio", font_size='20sp', color=(0, 0.8, 0.8, 1))
         
-        info_layout.add_widget(self.scrolling_title)
+        info_layout.add_widget(self.lbl_title)
         info_layout.add_widget(self.lbl_artist)
         self.root.add_widget(info_layout)
 
-        # 4. Barre de progression
+        # 4. Barre de progression (Calculs corrigés)
         prog_layout = BoxLayout(orientation='vertical', size_hint_y=0.1, spacing=5)
-        self.progress = ProgressBar(max=1000, value=0) # Max 1000 pour fluidité
+        self.progress = ProgressBar(max=1000, value=0) 
         self.lbl_time = Label(text="0:00 / 0:00", font_size='18sp', bold=True)
         prog_layout.add_widget(self.progress)
         prog_layout.add_widget(self.lbl_time)
         self.root.add_widget(prog_layout)
 
-        # 5. Contrôles (Shuffle, Prev, Play, Next, Repeat)
+        # 5. Contrôles (Gros Boutons)
         ctrl_layout = BoxLayout(size_hint_y=0.15, spacing=8)
         
-        btn_shuff = Button(text="SHUF", background_color=COL_BTN_OPT, size_hint_x=0.6)
+        btn_shuff = Button(text="SHUF", background_color=COL_BTN_OPT, size_hint_x=0.6, bold=True)
         btn_shuff.bind(on_press=lambda x: self.send_cmd("shuffle"))
 
-        btn_prev = Button(text="<<", font_size='28sp', background_color=COL_BTN_NAV, bold=True)
+        btn_prev = Button(text="<<", font_size='30sp', background_color=COL_BTN_NAV, bold=True)
         btn_prev.bind(on_press=lambda x: self.send_cmd("prev"))
 
-        btn_play = Button(text="PLAY", font_size='24sp', background_color=COL_BTN_MAIN, bold=True, size_hint_x=1.4)
+        btn_play = Button(text="PLAY", font_size='24sp', background_color=COL_BTN_PLAY, bold=True, size_hint_x=1.4)
         btn_play.bind(on_press=lambda x: self.send_cmd("play_pause"))
 
-        btn_next = Button(text=">>", font_size='28sp', background_color=COL_BTN_NAV, bold=True)
+        btn_next = Button(text=">>", font_size='30sp', background_color=COL_BTN_NAV, bold=True)
         btn_next.bind(on_press=lambda x: self.send_cmd("next"))
 
-        btn_rep = Button(text="RPT", background_color=COL_BTN_OPT, size_hint_x=0.6)
+        btn_rep = Button(text="RPT", background_color=COL_BTN_OPT, size_hint_x=0.6, bold=True)
         btn_rep.bind(on_press=lambda x: self.send_cmd("repeat"))
 
         ctrl_layout.add_widget(btn_shuff)
@@ -133,9 +111,9 @@ class RemoteApp(App):
 
         # 6. Volume
         vol_layout = BoxLayout(size_hint_y=0.12, spacing=15)
-        btn_vm = Button(text="VOL -", font_size='20sp', bold=True)
+        btn_vm = Button(text="VOL -", font_size='20sp', bold=True, background_color=COL_GRAY)
         btn_vm.bind(on_press=lambda x: self.send_cmd("vol_down"))
-        btn_vp = Button(text="VOL +", font_size='20sp', bold=True)
+        btn_vp = Button(text="VOL +", font_size='20sp', bold=True, background_color=COL_GRAY)
         btn_vp.bind(on_press=lambda x: self.send_cmd("vol_up"))
         vol_layout.add_widget(btn_vm)
         vol_layout.add_widget(btn_vp)
@@ -171,33 +149,29 @@ class RemoteApp(App):
         except: pass
 
     def apply_data(self, data):
-        # 1. Mise à jour Titre (Déclenche le défilement si nécessaire)
-        new_title = str(data.get('title', "OnlyAudio"))
-        if self.scrolling_title.text != new_title:
-            self.scrolling_title.text = new_title
-            
+        # 1. Textes
+        self.lbl_title.text = str(data.get('title', "OnlyAudio"))
         self.lbl_artist.text = str(data.get('artist', "Remote"))
 
-        # 2. Barre de progression (Calcul sécurisé)
+        # 2. Barre de temps (Le calcul qui répare tout)
         try:
-            # On s'assure que ce sont des nombres
+            # Conversion forcée en nombre décimal
             dur = float(data.get('dur', 1))
             pos = float(data.get('pos', 0))
             
-            # Mise à jour barre (échelle 0-1000 pour plus de précision)
+            # Mise à jour barre (0 à 1000)
             if dur > 0:
                 self.progress.value = (pos / dur) * 1000
             else:
                 self.progress.value = 0
-
-            # Mise à jour texte
+            
+            # Formatage mm:ss
             def fmt(ms):
                 seconds = int(ms / 1000)
                 return f"{seconds//60}:{seconds%60:02d}"
             
             self.lbl_time.text = f"{fmt(pos)} / {fmt(dur)}"
-        except Exception as e:
-            # En cas d'erreur de calcul, on ne plante pas, on met 0
+        except:
             self.lbl_time.text = "-:-- / -:--"
 
         # 3. Pochette
@@ -205,6 +179,7 @@ class RemoteApp(App):
         if b64:
             try:
                 im = CoreImage(io.BytesIO(base64.b64decode(b64)), ext="png")
+                # On ne met à jour que si l'image change pour économiser le CPU
                 if self.cover_image.texture != im.texture:
                     self.cover_image.texture = im.texture
             except: pass

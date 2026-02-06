@@ -59,7 +59,7 @@ android.allow_backup = True
 
 # --- MODIFICATION CRUCIALE ICI ---
 # On utilise la branche 'develop' pour avoir les liens de téléchargement corrigés (fix erreur 404)
-p4a.branch = develop
+p4a.branch = master
 
 # (str) Bootstrap to use for android builds
 p4a.bootstrap = sdl2

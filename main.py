@@ -20,7 +20,7 @@ PORT = "5000"
 # Couleurs
 COL_BG = (0.1, 0.1, 0.1, 1)
 COL_ZONE_TOP = (0.15, 0.15, 0.15, 1)
-COL_INPUT = (0.2, 0.2, 0.2, 1)     # Champ sombre pour discrétion
+COL_INPUT = (0.2, 0.2, 0.2, 1)
 COL_BTN_PLAY = (0, 0.7, 0, 1)
 COL_BTN_NAV = (0, 0.5, 0.8, 1)
 COL_BTN_OPT = (0.8, 0.4, 0, 1)
@@ -35,13 +35,11 @@ class RemoteApp(App):
             self.rect = Rectangle(size=(800, 1600), pos=self.root.pos)
         self.root.bind(size=self._update_rect, pos=self._update_rect)
 
-        # 1. ZONE DE CONNEXION (Plus petite et Sécurisée)
-        # size_hint_y réduit à 0.07 pour être discret
+        # 1. ZONE DE CONNEXION (Discrète & Sécurisée)
         conn_layout = BoxLayout(size_hint_y=0.07, spacing=10)
         
-        # Champ IP en mode "password" pour masquer l'adresse
         self.ip_input = TextInput(
-            text=DEFAULT_IP, multiline=False, password=True,
+            text=DEFAULT_IP, multiline=False, password=True, # Masqué
             font_size='18sp', halign='center', padding_y=[10,0],
             background_color=COL_INPUT, foreground_color=(1,1,1,1),
             hint_text="IP (Masquée)", hint_text_color=(0.5,0.5,0.5,1)
@@ -76,7 +74,7 @@ class RemoteApp(App):
         info_layout.add_widget(self.lbl_artist)
         self.root.add_widget(info_layout)
 
-        # 4. DURÉE TOTALE (Statique)
+        # 4. DURÉE TOTALE (Statique & Corrigée)
         self.lbl_time = Label(text="Durée : --:--", font_size='22sp', bold=True, color=(0.6, 0.6, 0.6, 1), size_hint_y=0.06)
         self.root.add_widget(self.lbl_time)
 
@@ -131,6 +129,8 @@ class RemoteApp(App):
         except: pass
 
     def check_connection(self, instance):
+        instance.text = "..."
+        Clock.schedule_once(lambda dt: setattr(instance, 'text', "LIER"), 1)
         self.update_status(0)
 
     def update_status(self, dt):
@@ -148,19 +148,26 @@ class RemoteApp(App):
         self.lbl_title.text = str(data.get('title', "OnlyAudio"))
         self.lbl_artist.text = str(data.get('artist', "Remote"))
 
-        # Gestion Durée Totale Uniquement
+        # --- CORRECTIF TEMPS INTELLIGENT ---
         try:
-            dur = float(data.get('dur', 0))
-            def fmt(ms):
-                seconds = int(ms / 1000)
-                return f"{seconds//60}:{seconds%60:02d}"
+            raw_dur = float(data.get('dur', 0))
             
-            # Affichage statique : "Durée : 3:45"
-            self.lbl_time.text = f"Durée : {fmt(dur)}"
+            # Si le chiffre est petit (< 20 000), c'est des Secondes
+            # Si le chiffre est grand (> 20 000), c'est des Millisecondes
+            if raw_dur < 20000:
+                 total_seconds = int(raw_dur)
+            else:
+                 total_seconds = int(raw_dur / 1000)
+            
+            # Formatage Minute:Seconde
+            mins = total_seconds // 60
+            secs = total_seconds % 60
+            
+            self.lbl_time.text = f"Durée : {mins}:{secs:02d}"
         except:
             self.lbl_time.text = "Durée : --:--"
 
-        # Gestion Pochette
+        # Pochette
         b64 = data.get('cover_b64', "")
         if b64:
             try:

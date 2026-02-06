@@ -17,54 +17,51 @@ from kivy.graphics import Color, Rectangle
 DEFAULT_IP = "192.168.1.15"
 PORT = "5000"
 
-# Couleurs (Haute Visibilité)
-COL_BG = (0.1, 0.1, 0.1, 1)        # Fond Noir/Gris
-COL_ZONE_TOP = (0.2, 0.2, 0.2, 1)  # Fond zone connexion
-COL_INPUT = (0.9, 0.9, 0.9, 1)     # Fond champ texte
-COL_BTN_PLAY = (0, 0.7, 0, 1)      # Vert
-COL_BTN_NAV = (0, 0.5, 0.8, 1)     # Bleu
-COL_BTN_OPT = (0.8, 0.4, 0, 1)     # Orange
-COL_GRAY = (0.3, 0.3, 0.3, 1)      # Gris pour Volume
+# Couleurs
+COL_BG = (0.1, 0.1, 0.1, 1)
+COL_ZONE_TOP = (0.15, 0.15, 0.15, 1)
+COL_INPUT = (0.2, 0.2, 0.2, 1)     # Champ sombre pour discrétion
+COL_BTN_PLAY = (0, 0.7, 0, 1)
+COL_BTN_NAV = (0, 0.5, 0.8, 1)
+COL_BTN_OPT = (0.8, 0.4, 0, 1)
+COL_GRAY = (0.3, 0.3, 0.3, 1)
 
 class RemoteApp(App):
     def build(self):
         self.root = BoxLayout(orientation='vertical', padding=15, spacing=15)
         
-        # Fond sombre général
         with self.root.canvas.before:
             Color(*COL_BG)
             self.rect = Rectangle(size=(800, 1600), pos=self.root.pos)
         self.root.bind(size=self._update_rect, pos=self._update_rect)
 
-        # 1. ZONE DE CONNEXION (Refaite proprement)
-        # Un fond légèrement plus clair pour distinguer cette zone
-        conn_layout = BoxLayout(size_hint_y=0.1, spacing=10, padding=5)
-        with conn_layout.canvas.before:
-            Color(*COL_ZONE_TOP)
-            self.rect_conn = Rectangle(size=conn_layout.size, pos=conn_layout.pos)
-        conn_layout.bind(pos=self._update_conn_rect, size=self._update_conn_rect)
-
+        # 1. ZONE DE CONNEXION (Plus petite et Sécurisée)
+        # size_hint_y réduit à 0.07 pour être discret
+        conn_layout = BoxLayout(size_hint_y=0.07, spacing=10)
+        
+        # Champ IP en mode "password" pour masquer l'adresse
         self.ip_input = TextInput(
-            text=DEFAULT_IP, multiline=False, 
-            font_size='20sp', halign='center', padding_y=[12,0],
-            background_color=COL_INPUT, hint_text="IP DU PC"
+            text=DEFAULT_IP, multiline=False, password=True,
+            font_size='18sp', halign='center', padding_y=[10,0],
+            background_color=COL_INPUT, foreground_color=(1,1,1,1),
+            hint_text="IP (Masquée)", hint_text_color=(0.5,0.5,0.5,1)
         )
         
-        btn_connect = Button(text="CONNECTER", size_hint_x=0.5, background_color=(0.4, 0.4, 0.4, 1), bold=True)
+        btn_connect = Button(text="LIER", size_hint_x=0.3, background_color=(0.4, 0.4, 0.4, 1), bold=True)
         btn_connect.bind(on_press=self.check_connection)
         
         conn_layout.add_widget(self.ip_input)
         conn_layout.add_widget(btn_connect)
         self.root.add_widget(conn_layout)
 
-        # 2. POCHETTE (Grande)
-        self.cover_image = KivyImage(source="", allow_stretch=True, keep_ratio=True, size_hint_y=0.4)
+        # 2. POCHETTE
+        self.cover_image = KivyImage(source="", allow_stretch=True, keep_ratio=True, size_hint_y=0.45)
         with self.cover_image.canvas.before:
             Color(0.15, 0.15, 0.15, 1)
             Rectangle(pos=self.cover_image.pos, size=self.cover_image.size)
         self.root.add_widget(self.cover_image)
 
-        # 3. INFOS TITRE (Gros et lisible)
+        # 3. INFOS TITRE
         info_layout = BoxLayout(orientation='vertical', size_hint_y=0.15)
         self.lbl_title = Label(
             text="Non connecté", 
@@ -79,31 +76,25 @@ class RemoteApp(App):
         info_layout.add_widget(self.lbl_artist)
         self.root.add_widget(info_layout)
 
-        # 4. TEMPS (Juste le texte, plus de barre)
-        # On le met bien gros pour que ce soit visible de loin
-        self.lbl_time = Label(text="--:-- / --:--", font_size='28sp', bold=True, color=(0.8, 0.8, 0.8, 1), size_hint_y=0.08)
+        # 4. DURÉE TOTALE (Statique)
+        self.lbl_time = Label(text="Durée : --:--", font_size='22sp', bold=True, color=(0.6, 0.6, 0.6, 1), size_hint_y=0.06)
         self.root.add_widget(self.lbl_time)
 
-        # 5. CONTRÔLES (Boutons Colorés)
+        # 5. CONTRÔLES
         ctrl_layout = BoxLayout(size_hint_y=0.15, spacing=8)
         
-        # Shuffle (Orange)
         btn_shuff = Button(text="ALEA", background_color=COL_BTN_OPT, size_hint_x=0.6, bold=True)
         btn_shuff.bind(on_press=lambda x: self.send_cmd("shuffle"))
 
-        # Prev (Bleu)
         btn_prev = Button(text="<<", font_size='30sp', background_color=COL_BTN_NAV, bold=True)
         btn_prev.bind(on_press=lambda x: self.send_cmd("prev"))
 
-        # PLAY (Vert, très large)
         btn_play = Button(text="LECTURE", font_size='22sp', background_color=COL_BTN_PLAY, bold=True, size_hint_x=1.4)
         btn_play.bind(on_press=lambda x: self.send_cmd("play_pause"))
 
-        # Next (Bleu)
         btn_next = Button(text=">>", font_size='30sp', background_color=COL_BTN_NAV, bold=True)
         btn_next.bind(on_press=lambda x: self.send_cmd("next"))
 
-        # Repeat (Orange)
         btn_rep = Button(text="REP", background_color=COL_BTN_OPT, size_hint_x=0.6, bold=True)
         btn_rep.bind(on_press=lambda x: self.send_cmd("repeat"))
 
@@ -114,7 +105,7 @@ class RemoteApp(App):
         ctrl_layout.add_widget(btn_rep)
         self.root.add_widget(ctrl_layout)
 
-        # 6. VOLUME (Gris, en bas)
+        # 6. VOLUME
         vol_layout = BoxLayout(size_hint_y=0.12, spacing=15)
         btn_vm = Button(text="VOL -", font_size='20sp', bold=True, background_color=COL_GRAY)
         btn_vm.bind(on_press=lambda x: self.send_cmd("vol_down"))
@@ -131,10 +122,6 @@ class RemoteApp(App):
         self.rect.pos = instance.pos
         self.rect.size = instance.size
 
-    def _update_conn_rect(self, instance, value):
-        self.rect_conn.pos = instance.pos
-        self.rect_conn.size = instance.size
-
     def send_cmd(self, cmd):
         ip = self.ip_input.text.strip()
         if ip: threading.Thread(target=self._req, args=(f"http://{ip}:{PORT}/{cmd}",)).start()
@@ -144,9 +131,6 @@ class RemoteApp(App):
         except: pass
 
     def check_connection(self, instance):
-        # Petit effet visuel : le bouton change de texte brièvement
-        instance.text = "..."
-        Clock.schedule_once(lambda dt: setattr(instance, 'text', "CONNECTER"), 1)
         self.update_status(0)
 
     def update_status(self, dt):
@@ -164,18 +148,17 @@ class RemoteApp(App):
         self.lbl_title.text = str(data.get('title', "OnlyAudio"))
         self.lbl_artist.text = str(data.get('artist', "Remote"))
 
-        # Gestion Temps (Sans barre)
+        # Gestion Durée Totale Uniquement
         try:
-            dur = float(data.get('dur', 1))
-            pos = float(data.get('pos', 0))
-            
+            dur = float(data.get('dur', 0))
             def fmt(ms):
                 seconds = int(ms / 1000)
                 return f"{seconds//60}:{seconds%60:02d}"
             
-            self.lbl_time.text = f"{fmt(pos)} / {fmt(dur)}"
+            # Affichage statique : "Durée : 3:45"
+            self.lbl_time.text = f"Durée : {fmt(dur)}"
         except:
-            self.lbl_time.text = "--:-- / --:--"
+            self.lbl_time.text = "Durée : --:--"
 
         # Gestion Pochette
         b64 = data.get('cover_b64', "")

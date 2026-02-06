@@ -7,7 +7,7 @@ source.include_exts = py,png,jpg,kv,atlas
 version = 1.0
 
 # MODIFICATION ICI : On laisse python3 tout court (plus robuste)
-requirements = python3,kivy,kivymd,pillow,requests,urllib3,chardet,idna,openssl
+requirements = python3,kivy,pillow,requests,urllib3,chardet,idna,openssl
 
 orientation = portrait
 fullscreen = 0

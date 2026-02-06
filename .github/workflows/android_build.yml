@@ -1,0 +1,50 @@
+name: Android Build
+on: [push]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+
+      # 1. Nettoyage d'espace disque (les compilations Android sont lourdes)
+      - name: Free Disk Space
+        uses: jlumbroso/free-disk-space@main
+        with:
+          tool-cache: true
+          android: true
+          dotnet: true
+          haskell: true
+          large-packages: true
+          swap-storage: true
+
+      # 2. Installation des dépendances Linux
+      - name: Install Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential libssl-dev libffi-dev python3-dev openjdk-17-jdk \
+          autoconf libtool pkg-config zlib1g-dev libncurses5-dev libncursesw5-dev libtinfo5 cmake libltdl-dev
+          pip3 install --upgrade buildozer cython==0.29.33 virtualenv
+
+      # 3. FIX ANTI-404 : Téléchargement manuel des fichiers dans le cache
+      - name: Pre-download missing libraries (Fix 404)
+        run: |
+          mkdir -p .buildozer/android/cache
+          echo "Téléchargement manuel de libffi et openssl..."
+          wget -q -O .buildozer/android/cache/libffi-3.4.4.tar.gz https://github.com/libffi/libffi/releases/download/v3.4.4/libffi-3.4.4.tar.gz
+          wget -q -O .buildozer/android/cache/openssl-1.1.1w.tar.gz https://www.openssl.org/source/old/1.1.1/openssl-1.1.1w.tar.gz
+          ls -l .buildozer/android/cache/
+
+      # 4. Lancement de Buildozer
+      - name: Build with Buildozer
+        run: |
+          # On accepte la licence SDK Android automatiquement
+          yes | buildozer android debug
+
+      # 5. Récupération de l'APK fini
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: OnlyAudio-APK
+          path: bin/*.apk
